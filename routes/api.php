@@ -159,7 +159,7 @@ Route::group(['prefix' => 'v1','namespace' => 'Api', 'middleware' => 'auth:api']
                     'destroy' => 'api.companies.destroy'
                 ],
             'except' => ['create', 'edit'],
-            'parameters' => ['component' => 'component_id']
+            'parameters' => ['company' => 'company_id']
         ]
     ); // Companies resource
 
@@ -197,6 +197,32 @@ Route::group(['prefix' => 'v1','namespace' => 'Api', 'middleware' => 'auth:api']
 
     /*--- Components API ---*/
 
+    Route::group(['prefix' => 'components'], function () {
+
+        Route::get('{component}/assets',
+            [
+                'as' =>'api.components.assets',
+                'uses' => 'ComponentsController@getAssets',
+            ]
+        );
+
+        Route::post('{component}/checkout',
+            [
+                'as' =>'api.components.checkout',
+                'uses' => 'ComponentsController@checkout',
+            ]
+        );
+
+        Route::post('{component}/checkin',
+        [
+            'as' =>'api.components.checkin',
+            'uses' => 'ComponentsController@checkin',
+        ]
+    );
+
+    }); // Components group
+    
+
     Route::resource('components', 'ComponentsController',
         [
             'names' =>
@@ -212,15 +238,7 @@ Route::group(['prefix' => 'v1','namespace' => 'Api', 'middleware' => 'auth:api']
         ]
     ); // Components resource
 
-    Route::group(['prefix' => 'components'], function () {
-
-        Route::get('{component}/assets',
-            [
-                'as' =>'api.components.assets',
-                'uses' => 'ComponentsController@getAssets',
-            ]
-        );
-    }); // Components group
+   
 
 
     /*--- Consumables API ---*/
