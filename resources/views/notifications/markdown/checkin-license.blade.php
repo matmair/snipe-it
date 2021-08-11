@@ -24,7 +24,7 @@
 @endif
 @endcomponent
 
-**{{ trans('mail.thanks') }}**
+{{ trans('mail.best_regards') }}
 
 {{ $snipeSettings->site_name }}
 

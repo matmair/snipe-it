@@ -31,7 +31,9 @@
       <ul class="nav nav-tabs">
         <li class="active"><a href="#details" data-toggle="tab">Details</a></li>
         <li><a href="#seats" data-toggle="tab">{{ trans('admin/licenses/form.seats') }}</a></li>
+        @can('files', $license)
         <li><a href="#uploads" data-toggle="tab">{{ trans('general.file_uploads') }}</a></li>
+        @endcan
         <li><a href="#history" data-toggle="tab">{{ trans('admin/licenses/general.checkout_history') }}</a></li>
         <li class="pull-right"><a href="#" data-toggle="modal" data-target="#uploadFileModal"><i class="fa fa-paperclip" aria-hidden="true"></i> {{ trans('button.upload') }}</a></li>
       </ul>
@@ -167,12 +169,12 @@
                     </strong>
                   </div>
                   <div class="col-md-8">
-                    {{ $license->expiration_date }}
+                    {{ \App\Helpers\Helper::getFormattedDateObject($license->expiration_date, 'date', false) }}
                   </div>
                 </div>
                 @endif
 
-                @if (isset($license->renewal_date))
+                @if ($license->renewal_date)
                 <div class="row">
                   <div class="col-md-4">
                     <strong>
@@ -180,9 +182,23 @@
                     </strong>
                   </div>
                   <div class="col-md-8">
-                    {{ $license->renewal_date }}
+                    {{ \App\Helpers\Helper::getFormattedDateObject($license->renewal_date, 'date', false) }}
                   </div>
                 </div>
+                @endif
+
+
+                @if ($license->termination_date)
+                  <div class="row">
+                    <div class="col-md-4">
+                      <strong>
+                        {{ trans('admin/licenses/form.termination_date') }}
+                      </strong>
+                    </div>
+                    <div class="col-md-8">
+                      {{ \App\Helpers\Helper::getFormattedDateObject($license->termination_date, 'date', false) }}
+                    </div>
+                  </div>
                 @endif
 
 
@@ -201,8 +217,6 @@
                   </div>
                 </div>
 
-
-
                 <div class="row">
                   <div class="col-md-4">
                     <strong>
@@ -210,7 +224,7 @@
                     </strong>
                   </div>
                   <div class="col-md-8">
-                    {{ $license->depreciated_date()->format("Y-m-d") }}
+                    {{ \App\Helpers\Helper::getFormattedDateObject($license->depreciated_date(), 'date', false) }}
                   </div>
                 </div>
 
@@ -246,13 +260,14 @@
                   @endif
 
 
-                  @if (isset($license->purchase_date))
+                @if (isset($license->purchase_date))
                 <div class="row">
                   <div class="col-md-4">
                     <strong>{{ trans('general.purchase_date') }}</strong>
                   </div>
                   <div class="col-md-8">
-                    {{ $license->purchase_date }}
+                    {{ \App\Helpers\Helper::getFormattedDateObject($license->purchase_date, 'date', false) }}
+
                   </div>
                 </div>
                   @endif
@@ -339,9 +354,9 @@
 
                 <table
                         data-columns="{{ \App\Presenters\LicensePresenter::dataTableLayoutSeats() }}"
-                        data-cookie-id-table="seatsTable-{{ $license->id }}"
-                        data-id-table="seatsTable-{{ $license->id }}"
-                        id="seatsTable-{{$license->id}}"
+                        data-cookie-id-table="seatsTable"
+                        data-id-table="seatsTable"
+                        id="seatsTable"
                         data-pagination="true"
                         data-search="false"
                         data-side-pagination="server"
@@ -351,7 +366,7 @@
                         data-sort-order="asc"
                         data-sort-name="name"
                         class="table table-striped snipe-table"
-                        data-url="{{ route('api.license.seats', $license->id) }}"
+                        data-url="{{ route('api.licenses.seats.index', $license->id) }}"
                         data-export-options='{
                         "fileName": "export-seats-{{ str_slug($license->name) }}-{{ date('Y-m-d') }}",
                         "ignoreColumn": ["actions","image","change","checkbox","checkincheckout","icon"]
@@ -365,6 +380,7 @@
           </div> <!--/.row-->
         </div> <!-- /.tab-pane -->
 
+        @can('files', $license)
         <div class="tab-pane" id="uploads">
           <div class="table-responsive">
             <table
@@ -388,7 +404,7 @@
                     }'>
             <thead>
               <tr>
-                <th data-visible="true" aria-hidden="true"><span class="sr-only">Icon</span></th>
+                <th data-visible="true" aria-hidden="true">Icon</th>
                 <th class="col-md-4" data-field="file_name" data-visible="true" data-sortable="true" data-switchable="true">{{ trans('general.file_name') }}</th>
                 <th class="col-md-4" data-field="notes" data-visible="true" data-sortable="true" data-switchable="true">{{ trans('general.notes') }}</th>
                 <th class="col-md-2" data-field="created_at" data-visible="true"  data-sortable="true" data-switchable="true">{{ trans('general.created_at') }}</th>
@@ -448,6 +464,7 @@
           </table>
           </div>
         </div> <!-- /.tab-pane -->
+        @endcan
 
         <div class="tab-pane" id="history">
           <div class="row">

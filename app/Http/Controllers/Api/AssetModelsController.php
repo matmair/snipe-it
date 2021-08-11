@@ -9,6 +9,7 @@ use App\Http\Transformers\SelectlistTransformer;
 use App\Models\Asset;
 use App\Models\AssetModel;
 use Illuminate\Http\Request;
+use App\Http\Requests\ImageUploadRequest;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -30,7 +31,20 @@ class AssetModelsController extends Controller
     public function index(Request $request)
     {
         $this->authorize('view', AssetModel::class);
-        $allowed_columns = ['id','image','name','model_number','eol','notes','created_at','manufacturer','requestable', 'assets_count'];
+        $allowed_columns =
+            [
+                'id',
+                'image',
+                'name',
+                'model_number',
+                'eol',
+                'notes',
+                'created_at',
+                'manufacturer',
+                'requestable',
+                'assets_count',
+                'category'
+            ];
 
         $assetmodels = AssetModel::select([
             'models.id',
@@ -75,12 +89,13 @@ class AssetModelsController extends Controller
             case 'manufacturer':
                 $assetmodels->OrderManufacturer($order);
                 break;
+            case 'category':
+                $assetmodels->OrderCategory($order);
+                break;
             default:
                 $assetmodels->orderBy($sort, $order);
                 break;
         }
-
-
 
         $total = $assetmodels->count();
         $assetmodels = $assetmodels->skip($offset)->take($limit)->get();
@@ -93,14 +108,15 @@ class AssetModelsController extends Controller
      *
      * @author [A. Gianotto] [<snipe@snipe.net>]
      * @since [v4.0]
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\ImageUploadRequest  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(ImageUploadRequest $request)
     {
         $this->authorize('create', AssetModel::class);
         $assetmodel = new AssetModel;
         $assetmodel->fill($request->all());
+        $assetmodel = $request->handleImages($assetmodel);
 
         if ($assetmodel->save()) {
             return response()->json(Helper::formatStandardApiResponse('success', $assetmodel, trans('admin/models/message.create.success')));
@@ -145,16 +161,17 @@ class AssetModelsController extends Controller
      *
      * @author [A. Gianotto] [<snipe@snipe.net>]
      * @since [v4.0]
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\ImageUploadRequest  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(ImageUploadRequest $request, $id)
     {
         $this->authorize('update', AssetModel::class);
         $assetmodel = AssetModel::findOrFail($id);
         $assetmodel->fill($request->all());
-
+        $assetmodel = $request->handleImages($assetmodel);
+        
         /**
          * Allow custom_fieldset_id to override and populate fieldset_id.
          * This is stupid, but required for legacy API support.
@@ -239,20 +256,20 @@ class AssetModelsController extends Controller
             $assetmodel->use_text = '';
 
             if ($settings->modellistCheckedValue('category')) {
-                $assetmodel->use_text .= (($assetmodel->category) ? e($assetmodel->category->name).' - ' : '');
+                $assetmodel->use_text .= (($assetmodel->category) ? $assetmodel->category->name.' - ' : '');
             }
 
             if ($settings->modellistCheckedValue('manufacturer')) {
-                $assetmodel->use_text .= (($assetmodel->manufacturer) ? e($assetmodel->manufacturer->name).' ' : '');
+                $assetmodel->use_text .= (($assetmodel->manufacturer) ? $assetmodel->manufacturer->name.' ' : '');
             }
 
-            $assetmodel->use_text .=  e($assetmodel->name);
+            $assetmodel->use_text .=  $assetmodel->name;
 
             if (($settings->modellistCheckedValue('model_number')) && ($assetmodel->model_number!='')) {
-                $assetmodel->use_text .=  ' (#'.e($assetmodel->model_number).')';
+                $assetmodel->use_text .=  ' (#'.$assetmodel->model_number.')';
             }
 
-            $assetmodel->use_image = ($settings->modellistCheckedValue('image') && ($assetmodel->image)) ? Storage::disk('public')->url('assetmodels/'.e($assetmodel->image)) : null;
+            $assetmodel->use_image = ($settings->modellistCheckedValue('image') && ($assetmodel->image)) ? Storage::disk('public')->url('models/'.e($assetmodel->image)) : null;
         }
 
         return (new SelectlistTransformer)->transformSelectlist($assetmodels);

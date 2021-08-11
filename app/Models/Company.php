@@ -78,7 +78,7 @@ final class Company extends SnipeModel
             $company_id = null;
         }
 
-        $table = ($table_name) ? DB::getTablePrefix().$table_name."." : '';
+        $table = ($table_name) ? $table_name."." : '';
 
         if(\Schema::hasColumn($query->getModel()->getTable(), $column)){
              return $query->where($table.$column, '=', $company_id); 
@@ -126,9 +126,12 @@ final class Company extends SnipeModel
         } elseif (!static::isFullMultipleCompanySupportEnabled()) {
             return true;
         } else {
-            $current_user_company_id = Auth::user()->company_id;
-            $companyable_company_id = $companyable->company_id;
-            return ($current_user_company_id == null || $current_user_company_id == $companyable_company_id || Auth::user()->isSuperUser());
+            if (Auth::user()) {
+                $current_user_company_id = Auth::user()->company_id;
+                $companyable_company_id = $companyable->company_id;
+                return ($current_user_company_id == null || $current_user_company_id == $companyable_company_id || Auth::user()->isSuperUser());
+            }
+
         }
     }
 

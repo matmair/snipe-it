@@ -1,5 +1,4 @@
-
-const { mix } = require('laravel-mix');
+const mix = require('laravel-mix');
 
 // This generates a file called app.css, which we use
 // later on to build all.css
@@ -17,7 +16,7 @@ mix
             './node_modules/bootstrap/dist/css/bootstrap.css',
             './node_modules/font-awesome/css/font-awesome.css',
             './public/css/build/AdminLTE.css',
-            './node_modules/jquery-ui-dist/jquery-ui.css',
+            './node_modules/jquery-ui-bundle/jquery-ui.css',
             './node_modules/admin-lte/plugins/iCheck/minimal/blue.css',
             './node_modules/icheck/skins/minimal/minimal.css',
             './node_modules/bootstrap-datepicker/dist/css/bootstrap-datepicker.standalone.css',
@@ -27,7 +26,6 @@ mix
             './node_modules/ekko-lightbox/dist/ekko-lightbox.css',
             './node_modules/bootstrap-table/dist/bootstrap-table.css',
             './public/css/build/app.css',
-            //'./resources/assets/css/lib/select2.css',
             './node_modules/select2/dist/css/select2.css',
             './public/css/build/overrides.css'
         ],
@@ -39,27 +37,13 @@ mix
 mix.copy(['./node_modules/icheck/skins/minimal/blue.png',
     './node_modules/icheck/skins/minimal/blue@2x.png'], './public/css');
 
-/**
- * Copy, minify and version skins
- */
-mix
-    .minify([
-        './public/css/dist/skins/skin-green-dark.css',
-        './public/css/dist/skins/skin-black-dark.css',
-        './public/css/dist/skins/skin-blue-dark.css',
-        './public/css/dist/skins/skin-yellow-dark.css',
-        './public/css/dist/skins/skin-red-dark.css',
-        './public/css/dist/skins/skin-purple-dark.css',
-        './public/css/dist/skins/skin-orange-dark.css',
-        './public/css/dist/skins/skin-contrast.css'
-    ])
-    .version();
+
 /**
  * Copy, minify and version signature-pad.css
  */
 mix
     .copy('./resources/assets/css/signature-pad.css', './public/css/dist')
-    .minify('./public/css/build/signature-pad.css');
+    .minify('./public/css/dist/signature-pad.css');
 
 // Combine main SnipeIT JS files
 mix.js(
@@ -95,8 +79,6 @@ mix.less('./resources/assets/less/skins/skin-orange.less', 'css/dist/skins', './
 mix.combine(
     [
         './node_modules/bootstrap-table/dist/bootstrap-table.css',
-        './node_modules/bootstrap-table/dist/extentions/mobile/bootstrap-table-mobile.css',
-        './node_modules/bootstrap-table/dist/extensions/export/bootstrap-table-export.css',
         './node_modules/bootstrap-table/dist/extensions/sticky-header/bootstrap-table-sticky-header.css'
     ],
     'public/css/dist/bootstrap-table.css'
@@ -112,6 +94,7 @@ mix
         [
             './node_modules/admin-lte/dist/js/adminlte.min.js',
             './node_modules/tether/dist/js/tether.js',
+            './node_modules/jquery-ui-bundle/jquery-ui.js',
             './node_modules/jquery-slimscroll/jquery.slimscroll.js',
             './node_modules/jquery.iframe-transport/jquery.iframe-transport.js',
             './node_modules/blueimp-file-upload/js/jquery.fileupload.js',
@@ -137,14 +120,14 @@ mix
     .combine(
         [
             './node_modules/bootstrap-table/dist/bootstrap-table.js',
-            './node_modules/bootstrap-table/dist/extentions/mobile/bootstrap-table-mobile.js',
+            './node_modules/bootstrap-table/dist/extensions/mobile/bootstrap-table-mobile.js',
             './node_modules/bootstrap-table/dist/extensions/export/bootstrap-table-export.js',
             './node_modules/bootstrap-table/dist/extensions/cookie/bootstrap-table-cookie.js',
             './resources/assets/js/extensions/jquery.base64.js',
             './node_modules/tableexport.jquery.plugin/tableExport.js',
             './node_modules/tableexport.jquery.plugin/libs/jsPDF/jspdf.min.js',
-            './resources/js/FileSaver.min.js',
-            './resources/js/xlsx.core.min.js',
+            './resources/assets/js/FileSaver.min.js',
+            './node_modules/xlsx/dist/xlsx.core.min.js',
             './node_modules/tableexport.jquery.plugin/libs/jsPDF-AutoTable/jspdf.plugin.autotable.js',
             './node_modules/bootstrap-table/dist/extensions/sticky-header/bootstrap-table-sticky-header.js',
             './node_modules/bootstrap-table/dist/extensions/toolbar/bootstrap-table-toolbar.js'
@@ -163,5 +146,26 @@ mix.combine(
     ).version();
 
 
-
+/**
+ * Copy, minify and version skins
+ */
+mix
+    .minify([
+        './public/css/dist/skins/skin-green.css',
+        './public/css/dist/skins/skin-green-dark.css',
+        './public/css/dist/skins/skin-black.css',
+        './public/css/dist/skins/skin-black-dark.css',
+        './public/css/dist/skins/skin-blue.css',
+        './public/css/dist/skins/skin-blue-dark.css',
+        './public/css/dist/skins/skin-yellow.css',
+        './public/css/dist/skins/skin-yellow-dark.css',
+        './public/css/dist/skins/skin-red.css',
+        './public/css/dist/skins/skin-red-dark.css',
+        './public/css/dist/skins/skin-purple.css',
+        './public/css/dist/skins/skin-purple-dark.css',
+        './public/css/dist/skins/skin-orange.css',
+        './public/css/dist/skins/skin-orange-dark.css',
+        './public/css/dist/skins/skin-contrast.css'
+    ])
+    .version();
 

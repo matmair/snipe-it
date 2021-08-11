@@ -22,6 +22,16 @@ Route::group(['middleware' => 'auth'], function () {
     Route::resource('locations', 'LocationsController', [
         'parameters' => ['location' => 'location_id']
     ]);
+    
+    Route::get(
+        'locations/{locationId}/printassigned',
+        [ 'as' => 'locations.print_assigned', 'uses' => 'LocationsController@print_assigned' ]
+    );
+    
+    Route::get(
+        'locations/{locationId}/printallassigned',
+        [ 'as' => 'locations.print_all_assigned', 'uses' => 'LocationsController@print_all_assigned' ]
+    );
 
     /*
     * Manufacturers
@@ -324,6 +334,9 @@ Route::group(['middleware' => ['auth']], function () {
         [ 'as' => 'reports.activity', 'uses' => 'ReportsController@getActivityReport' ]
     );
 
+    Route::post('reports/activity', 'ReportsController@postActivityReport');
+
+
 
     Route::get(
         'reports/unaccepted_assets',
@@ -461,5 +474,4 @@ Route::group(['middleware' => 'web'], function () {
 
 Auth::routes();
 
-
-
+Route::get('/health', [ 'as' => 'health', 'uses' => 'HealthController@get']);

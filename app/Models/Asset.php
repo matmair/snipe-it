@@ -130,6 +130,8 @@ class Asset extends Depreciable
         'supplier_id',
         'warranty_months',
         'requestable',
+        'last_checkout',
+        'expected_checkin',
     ];
 
     use Searchable;
@@ -164,6 +166,7 @@ class Asset extends Depreciable
         'supplier'           => ['name'],
         'company'            => ['name'],
         'defaultLoc'         => ['name'],
+        'location'           => ['name'],
         'model'              => ['name', 'model_number'],
         'model.category'     => ['name'],
         'model.manufacturer' => ['name'],
@@ -177,11 +180,6 @@ class Asset extends Depreciable
      */
     public function save(array $params = [])
     {
-        $settings = \App\Models\Setting::getSettings();
-
-        // I don't remember why we have this here? Asset tag would always be required, even if auto increment is on...
-        $this->rules['asset_tag'] = ($settings->auto_increment_assets == '1') ? 'max:255' : 'required';
-
         if($this->model_id != '') {
             $model = AssetModel::find($this->model_id);
 
@@ -232,7 +230,10 @@ class Asset extends Depreciable
     }
 
     /**
-     * Determines if an asset is available for checkout
+     * Determines if an asset is available for checkout.
+     * This checks to see if the it's checked out to an invalid (deleted) user
+     * OR if the assigned_to and deleted_at fields on the asset are empty AND
+     * that the status is deployable
      *
      * @author [A. Gianotto] [<snipe@snipe.net>]
      * @since [v3.0]
@@ -240,12 +241,18 @@ class Asset extends Depreciable
      */
     public function availableForCheckout()
     {
-        if (
-            (empty($this->assigned_to)) &&
-            (empty($this->deleted_at)) &&
-            (($this->assetstatus) && ($this->assetstatus->deployable == 1)))
-        {
-            return true;
+
+        // This asset is not currently assigned to anyone and is not deleted...
+        if ((!$this->assigned_to) && (!$this->deleted_at)) {
+
+            // The asset status is not archived and is deployable
+            if (($this->assetstatus) && ($this->assetstatus->archived == '0')
+                && ($this->assetstatus->deployable == '1'))
+            {
+
+                return true;
+            }
+
         }
         return false;
     }
@@ -301,8 +308,14 @@ class Asset extends Depreciable
         }
 
         if ($this->save()) {
-
-            event(new CheckoutableCheckedOut($this, $target, Auth::user(), $note));
+            if (is_integer($admin)){
+                $checkedOutBy = User::findOrFail($admin);
+            } elseif (get_class($admin) === 'App\Models\User') {
+                $checkedOutBy = $admin;
+            } else {
+                $checkedOutBy = Auth::user();
+            }
+            event(new CheckoutableCheckedOut($this, $target, $checkedOutBy, $note));
 
             $this->increment('checkout_counter', 1);
             return true;
@@ -424,7 +437,7 @@ class Asset extends Depreciable
      */
     public function assignedTo()
     {
-        return $this->morphTo('assigned', 'assigned_type', 'assigned_to');
+        return $this->morphTo('assigned', 'assigned_type', 'assigned_to')->withTrashed();
     }
 
     /**
@@ -1094,7 +1107,7 @@ class Asset extends Depreciable
         $interval = $settings->audit_warning_days ?? 0;
 
         return $query->whereNotNull('assets.next_audit_date')
-            ->whereRaw("DATE_SUB(assets.next_audit_date, INTERVAL $interval DAY) <= '".Carbon::now()."'")
+            ->whereRaw("DATE_SUB(".DB::getTablePrefix()."assets.next_audit_date, INTERVAL $interval DAY) <= '".Carbon::now()."'")
             ->where('assets.archived', '=', 0)
             ->NotArchived();
     }

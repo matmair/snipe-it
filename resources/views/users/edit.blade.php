@@ -106,7 +106,7 @@
                 <div class="form-group {{ $errors->has('username') ? 'has-error' : '' }}">
                   <label class="col-md-3 control-label" for="username">{{ trans('admin/users/table.username') }}</label>
                   <div class="col-md-6{{  (\App\Helpers\Helper::checkIfRequired($user, 'username')) ? ' required' : '' }}">
-                    @if ($user->ldap_import!='1')
+                    @if ($user->ldap_import!='1' || str_contains(Route::currentRouteName(), 'clone'))
                       <input
                         class="form-control"
                         type="text"
@@ -137,7 +137,7 @@
                     {{ trans('admin/users/table.password') }}
                   </label>
                   <div class="col-md-6{{  (\App\Helpers\Helper::checkIfRequired($user, 'password')) ? ' required' : '' }}">
-                    @if ($user->ldap_import!='1')
+                    @if ($user->ldap_import!='1' || str_contains(Route::currentRouteName(), 'clone') )
                       <input
                         type="password"
                         name="password"
@@ -161,7 +161,7 @@
                   </div>
                 </div>
 
-                @if ($user->ldap_import!='1')
+                @if ($user->ldap_import!='1' || str_contains(Route::currentRouteName(), 'clone'))
                 <!-- Password Confirm -->
                 <div class="form-group {{ $errors->has('password_confirmation') ? 'has-error' : '' }}">
                   <label class="col-md-3 control-label" for="password_confirmation">
@@ -188,7 +188,46 @@
                 </div>
                 @endif
 
-                <!-- Email -->
+              <!-- Activation Status -->
+                  <div class="form-group {{ $errors->has('activated') ? 'has-error' : '' }}">
+
+                      <div class="form-group">
+                          <div class="col-md-3 control-label">
+                              {{ Form::label('activated', trans('general.login_enabled')) }}
+                          </div>
+                          <div class="col-md-9">
+                              @if (config('app.lock_passwords'))
+                                  <div class="icheckbox disabled" style="padding-left: 10px;">
+                                      <input type="checkbox" value="1" name="activated" class="minimal disabled" {{ (old('activated', $user->activated)) == '1' ? ' checked="checked"' : '' }} disabled="disabled" aria-label="activated">
+                                      <!-- this is necessary because the field is disabled and will reset -->
+                                      <input type="hidden" name="activated" value="{{ $user->activated }}">
+                                      {{ trans('admin/users/general.activated_help_text') }}
+                                      <p class="help-block">{{ trans('general.feature_disabled') }}</p>
+
+                                  </div>
+                              @elseif ($user->id === Auth::user()->id)
+                                  <div class="icheckbox disabled" style="padding-left: 10px;">
+                                      <input type="checkbox" value="1" name="activated" class="minimal disabled" {{ (old('activated', $user->activated)) == '1' ? ' checked="checked"' : '' }} disabled="disabled">
+                                      <!-- this is necessary because the field is disabled and will reset -->
+                                      <input type="hidden" name="activated" value="1" aria-label="activated">
+                                      {{ trans('admin/users/general.activated_help_text') }}
+                                      <p class="help-block">{{ trans('admin/users/general.activated_disabled_help_text') }}</p>
+                                  </div>
+                              @else
+                                  <div style="padding-left: 10px;">
+                                      <input type="checkbox" value="1" id="activated" name="activated" class="minimal" {{ (old('activated', $user->activated)) == '1' ? ' checked="checked"' : '' }} aria-label="activated">
+                                      {{ trans('admin/users/general.activated_help_text') }}
+                                  </div>
+                              @endif
+
+                              {!! $errors->first('activated', '<span class="alert-msg" aria-hidden="true">:message</span>') !!}
+
+                          </div>
+                      </div>
+                  </div>
+
+
+                  <!-- Email -->
                 <div class="form-group {{ $errors->has('email') ? 'has-error' : '' }}">
                   <label class="col-md-3 control-label" for="email">{{ trans('admin/users/table.email') }} </label>
                   <div class="col-md-6{{  (\App\Helpers\Helper::checkIfRequired($user, 'email')) ? ' required' : '' }}">
@@ -208,6 +247,27 @@
                     {!! $errors->first('email', '<span class="alert-msg" aria-hidden="true">:message</span>') !!}
                   </div>
                 </div>
+
+
+                  <!-- Email user -->
+                  @if (!$user->id)
+                      <div class="form-group" id="email_user_row">
+                          <div class="col-sm-3">
+                          </div>
+                          <div class="col-md-9">
+                              <div class="icheckbox disabled" id="email_user_div">
+                                  {{ Form::checkbox('email_user', '1', Request::old('email_user'),['class' => 'minimal', 'disabled'=>true, 'id' => 'email_user_checkbox']) }}
+                                  Email this user their credentials?
+
+                              </div>
+                              <p class="help-block">
+                                  {{ trans('admin/users/general.send_email_help') }}
+                              </p>
+
+
+                          </div>
+                      </div> <!--/form-group-->
+                  @endif
 
                 <!-- Company -->
                 @if (\App\Models\Company::canManageUsersCompanies())
@@ -347,63 +407,7 @@
 
 
 
-                  <!-- Activation Status -->
-                  <div class="form-group {{ $errors->has('activated') ? 'has-error' : '' }}">
 
-                      <div class="form-group">
-                          <div class="col-md-3 control-label">
-                              {{ Form::label('activated', trans('admin/users/table.activated')) }}
-                          </div>
-                          <div class="col-md-9">
-                              @if (config('app.lock_passwords'))
-                                  <div class="icheckbox disabled" style="padding-left: 10px;">
-                                      <input type="checkbox" value="1" name="activated" class="minimal disabled" {{ (old('activated', $user->activated)) == '1' ? ' checked="checked"' : '' }} disabled="disabled" aria-label="activated">
-                                      <!-- this is necessary because the field is disabled and will reset -->
-                                      <input type="hidden" name="activated" value="{{ $user->activated }}">
-                                      {{ trans('admin/users/general.activated_help_text') }}
-                                      <p class="help-block">{{ trans('general.feature_disabled') }}</p>
-
-                                  </div>
-                              @elseif ($user->id === Auth::user()->id)
-                                  <div class="icheckbox disabled" style="padding-left: 10px;">
-                                      <input type="checkbox" value="1" name="activated" class="minimal disabled" {{ (old('activated', $user->activated)) == '1' ? ' checked="checked"' : '' }} disabled="disabled">
-                                      <!-- this is necessary because the field is disabled and will reset -->
-                                      <input type="hidden" name="activated" value="1" aria-label="activated">
-                                      {{ trans('admin/users/general.activated_help_text') }}
-                                      <p class="help-block">{{ trans('admin/users/general.activated_disabled_help_text') }}</p>
-                                  </div>
-                              @else
-                                  <div style="padding-left: 10px;">
-                                      <input type="checkbox" value="1" name="activated" class="minimal" {{ (old('activated', $user->activated)) == '1' ? ' checked="checked"' : '' }} aria-label="activated">
-                                  {{ trans('admin/users/general.activated_help_text') }}
-                                  </div>
-                              @endif
-
-                              {!! $errors->first('activated', '<span class="alert-msg" aria-hidden="true">:message</span>') !!}
-
-                      </div>
-                    </div>
-                  </div>
-
-                <!-- Email user -->
-                @if (!$user->id)
-                    <div class="form-group" id="email_user_row" style="display: none;">
-                        <div class="col-sm-3">
-                        </div>
-                        <div class="col-md-9">
-                            <div class="icheckbox disabled" id="email_user_div">
-                                {{ Form::checkbox('email_user', '1', Request::old('email_user'),['class' => 'minimal', 'disabled'=>true, 'id' => 'email_user_checkbox']) }}
-                                Email this user their credentials?
-
-                            </div>
-                            <p class="help-block">
-                                {{ trans('admin/users/general.send_email_help') }}
-                            </p>
-
-
-                        </div>
-                    </div> <!--/form-group-->
-                @endif
 
                 @if ($snipeSettings->two_factor_enabled!='')
                   @if ($snipeSettings->two_factor_enabled=='1')
@@ -534,23 +538,25 @@
 <script nonce="{{ csrf_token() }}">
 $(document).ready(function() {
 
-    $('#user_activated').on('ifChecked', function(event){
+    $('#activated').on('ifChecked', function(event){
+        console.log('user activated is checked');
         $("#email_user_row").show();
-
-        $('#email').on('keyup',function(){
-            event.preventDefault();
-
-            if(this.value.length > 5){
-                $('#email_user_checkbox').iCheck('enable');
-            } else {
-                $('#email_user_checkbox').iCheck('disable').iCheck('uncheck');
-            }
-        });
 	});
 
-    $('#user_activated').on('ifUnchecked', function(event){
+    $('#activated').on('ifUnchecked', function(event){
         $("#email_user_row").hide();
     });
+
+    $('#email').on('keyup',function(){
+        event.preventDefault();
+
+        if(this.value.length > 5){
+            $('#email_user_checkbox').iCheck('enable');
+        } else {
+            $('#email_user_checkbox').iCheck('disable').iCheck('uncheck');
+        }
+    });
+
 
 	// Check/Uncheck all radio buttons in the group
     $('tr.header-row input:radio').on('ifClicked', function () {

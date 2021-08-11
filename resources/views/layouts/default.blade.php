@@ -17,7 +17,7 @@
 
       <link rel="apple-touch-icon" href="{{ ($snipeSettings) && ($snipeSettings->favicon!='') ?  Storage::disk('public')->url(e($snipeSettings->logo)) : '/img/logo.png' }}">
       <link rel="apple-touch-startup-image" href="{{ ($snipeSettings) && ($snipeSettings->favicon!='') ?  Storage::disk('public')->url(e($snipeSettings->logo)) : '/img/logo.png' }}">
-      <link rel="shortcut icon" type="image/ico" href="{{ ($snipeSettings) && ($snipeSettings->favicon!='') ?  Storage::disk('public')->url(e($snipeSettings->favicon)) : 'favicon.ico' }} ">
+      <link rel="shortcut icon" type="image/ico" href="{{ ($snipeSettings) && ($snipeSettings->favicon!='') ?  Storage::disk('public')->url(e($snipeSettings->favicon)) : '/favicon.ico' }} ">
 
 
       <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -28,13 +28,13 @@
     </script>
 
     {{-- stylesheets --}}
-
     <link rel="stylesheet" href="{{ url(mix('css/dist/all.css')) }}">
+    @if (($snipeSettings) && ($snipeSettings->allow_user_skin==1) && Auth::check() && Auth::user()->present()->skin != '')
+        <link rel="stylesheet" href="{{ url(mix('css/dist/skins/skin-'.Auth::user()->present()->skin.'.min.css')) }}">
+    @else
     <link rel="stylesheet" href="{{ url(mix('css/dist/skins/skin-'.($snipeSettings->skin!='' ? $snipeSettings->skin : 'blue').'.css')) }}">
-
-
-
-      {{-- page level css --}}
+    @endif
+    {{-- page level css --}}
     @stack('css')
 
 
@@ -65,12 +65,6 @@
     </style>
     @endif
 
-      @if (($snipeSettings) && ($snipeSettings->custom_css))
-          <style>
-              {!! $snipeSettings->show_custom_css() !!}
-          </style>
-      @endif
-
 
     <script nonce="{{ csrf_token() }}">
           window.snipeit = {
@@ -88,7 +82,13 @@
 
 
   </head>
-  <body class="sidebar-mini skin-{{ $snipeSettings->skin!='' ? $snipeSettings->skin : 'blue' }} {{ (session('menu_state')!='open') ? 'sidebar-mini sidebar-collapse' : ''  }}">
+
+  @if (($snipeSettings) && ($snipeSettings->allow_user_skin==1) && Auth::check() && Auth::user()->present()->skin != '')
+      <body class="sidebar-mini skin-{{ $snipeSettings->skin!='' ? Auth::user()->present()->skin : 'blue' }} {{ (session('menu_state')!='open') ? 'sidebar-mini sidebar-collapse' : ''  }}">
+  @else
+      <body class="sidebar-mini skin-{{ $snipeSettings->skin!='' ? $snipeSettings->skin : 'blue' }} {{ (session('menu_state')!='open') ? 'sidebar-mini sidebar-collapse' : ''  }}">
+  @endif
+
   <a class="skip-main" href="#main">Skip to main content</a>
     <div class="wrapper">
 
@@ -403,24 +403,26 @@
                 </a>
                 <ul class="treeview-menu">
                   <li>
-                    <a href="{{ url('hardware') }}">
+                      <a href="{{ url('hardware') }}">
+                          <i class="fa fa-circle-o text-grey" aria-hidden="true"></i>
                         {{ trans('general.list_all') }}
                     </a>
                   </li>
 
-                    <?php $status_navs = \App\Models\Statuslabel::where('show_in_nav', '=', 1)->get(); ?>
+                    <?php $status_navs = \App\Models\Statuslabel::where('show_in_nav', '=', 1)->withCount('assets as asset_count')->get(); ?>
                     @if (count($status_navs) > 0)
-                        <li class="divider">&nbsp;</li>
                         @foreach ($status_navs as $status_nav)
-                            <li><a href="{{ route('statuslabels.show', ['statuslabel' => $status_nav->id]) }}"}> {{ $status_nav->name }}</a></li>
+                            <li><a href="{{ route('statuslabels.show', ['statuslabel' => $status_nav->id]) }}"><i class="fa fa-circle text-grey" aria-hidden="true"></i> {{ $status_nav->name }} ({{ $status_nav->asset_count }})</a></li>
                         @endforeach
                     @endif
 
 
                   <li{!! (Request::query('status') == 'Deployed' ? ' class="active"' : '') !!}>
-                    <a href="{{ url('hardware?status=Deployed') }}"><i class="fa fa-circle-o text-blue"></i>
+                    <a href="{{ url('hardware?status=Deployed') }}">
+                        <i class="fa fa-circle-o text-blue"></i>
                         {{ trans('general.all') }}
                         {{ trans('general.deployed') }}
+                        ({{ (isset($total_deployed_sidebar)) ? $total_deployed_sidebar : '' }})
                     </a>
                   </li>
                   <li{!! (Request::query('status') == 'RTD' ? ' class="active"' : '') !!}>
@@ -428,21 +430,25 @@
                         <i class="fa fa-circle-o text-green"></i>
                         {{ trans('general.all') }}
                         {{ trans('general.ready_to_deploy') }}
+                        ({{ (isset($total_rtd_sidebar)) ? $total_rtd_sidebar : '' }})
                     </a>
                   </li>
                   <li{!! (Request::query('status') == 'Pending' ? ' class="active"' : '') !!}><a href="{{ url('hardware?status=Pending') }}"><i class="fa fa-circle-o text-orange"></i>
                           {{ trans('general.all') }}
                           {{ trans('general.pending') }}
+                          ({{ (isset($total_pending_sidebar)) ? $total_pending_sidebar : '' }})
                       </a>
                   </li>
                   <li{!! (Request::query('status') == 'Undeployable' ? ' class="active"' : '') !!} ><a href="{{ url('hardware?status=Undeployable') }}"><i class="fa fa-times text-red"></i>
                           {{ trans('general.all') }}
                           {{ trans('general.undeployable') }}
+                          ({{ (isset($total_undeployable_sidebar)) ? $total_undeployable_sidebar : '' }})
                       </a>
                   </li>
                   <li{!! (Request::query('status') == 'Archived' ? ' class="active"' : '') !!}><a href="{{ url('hardware?status=Archived') }}"><i class="fa fa-times text-red"></i>
                           {{ trans('general.all') }}
                           {{ trans('admin/hardware/general.archived') }}
+                          ({{ (isset($total_archived_sidebar)) ? $total_archived_sidebar : '' }})
                           </a>
                   </li>
                     <li{!! (Request::query('status') == 'Requestable' ? ' class="active"' : '') !!}><a href="{{ url('hardware?status=Requestable') }}"><i class="fa fa-check text-blue"></i>
@@ -742,7 +748,17 @@
         <section class="content-header" style="padding-bottom: 30px;">
           <h1 class="pull-left">
             @yield('title')
+
+
           </h1>
+
+            @if (isset($helpText))
+            @include ('partials.more-info',
+                                   [
+                                       'helpText' => $helpText,
+                                       'helpPosition' => (isset($helpPosition)) ? $helpPosition : 'left'
+                                   ])
+            @endif
           <div class="pull-right">
             @yield('header_right')
           </div>
@@ -821,7 +837,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                    <h2 class="modal-title" id="myModalLabel">&nbsp;</h4>
+                    <h4 class="modal-title" id="myModalLabel">&nbsp;</h4>
                 </div>
                 <div class="modal-body"></div>
                 <div class="modal-footer">
@@ -839,6 +855,10 @@
 
     {{-- Javascript files --}}
     <script src="{{ url(mix('js/dist/all.js')) }}" nonce="{{ csrf_token() }}"></script>
+
+    <!-- v5-beta: This pGenerator call must remain here for v5 - until fixed - so that the JS password generator works for the user create modal. -->
+    <script src="{{ url('js/pGenerator.jquery.js') }}"></script>
+
     {{-- Page level javascript --}}
     @stack('js')
 
@@ -847,12 +867,20 @@
 
 
     <script nonce="{{ csrf_token() }}">
+
+
+        // ignore: 'input[type=hidden]' is required here to validate the select2 lists
         $.validate({
             form : '#create-form',
             modules : 'date, toggleDisabled',
             disabledFormFilter : '#create-form',
-            showErrorDialogs : true
+            showErrorDialogs : true,
+            ignore: 'input[type=hidden]'
         });
+
+
+
+
 
         $(function () {
   

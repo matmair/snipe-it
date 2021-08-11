@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Input;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use App\Helpers\StorageHelper;
 
 class LicenseFilesController extends Controller
 {
@@ -39,7 +40,8 @@ class LicenseFilesController extends Controller
                 $upload_success = false;
                 foreach ($request->file('file') as $file) {
 
-                    $file_name = 'license-'.date('Y-m-d-His').'-'.$file->getBasename().'.'.$file->getClientOriginalExtension();
+
+                    $file_name = 'license-'.$license->id.'-'.str_random(8).'-'.str_slug(basename($file->getClientOriginalName(), '.'.$file->getClientOriginalExtension())).'.'.$file->getClientOriginalExtension();
 
 
                     $upload_success = $file->storeAs('private_uploads/licenses', $file_name);
@@ -142,19 +144,18 @@ class LicenseFilesController extends Controller
 
                 // We have to override the URL stuff here, since local defaults in Laravel's Flysystem
                 // won't work, as they're not accessible via the web
-                if (config('filesystems.default') == 'local') {
-                    \Log::debug('The private filesystem is local');
-                    return Response::make(Storage::get($file));
-
+                if (config('filesystems.default') == 'local') { // TODO - is there any way to fix this at the StorageHelper layer?
+                    return StorageHelper::downloader($file);
                 } else {
                     if ($download != 'true') {
-                        if ($contents = file_get_contents(Storage::url($file))) {
+                        \Log::debug('display the file');
+                        if ($contents = file_get_contents(Storage::url($file))) { // TODO - this will fail on private S3 files or large public ones
                             return Response::make(Storage::url($file)->header('Content-Type', mime_content_type($file)));
                         }
                         return JsonResponse::create(["error" => "Failed validation: "], 500);
                     }
 
-                    return Storage::download($file);
+                    return StorageHelper::downloader($file);
                 }
 
             }

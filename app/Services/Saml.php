@@ -5,6 +5,7 @@ namespace App\Services;
 use OneLogin\Saml2\Auth as OneLogin_Saml2_Auth;
 use OneLogin\Saml2\IdPMetadataParser as OneLogin_Saml2_IdPMetadataParser;
 use OneLogin\Saml2\Settings as OneLogin_Saml2_Settings;
+use OneLogin\Saml2\Utils as OneLogin_Saml2_Utils;
 use App\Models\Setting;
 use App\Models\User;
 use Exception;
@@ -140,6 +141,7 @@ class Saml
      * Builds settings from Snipe-IT for OneLogin_Saml2_Auth.
      * 
      * @author Johnson Yi <jyi.dev@outlook.com>
+     * @author Michael Pietsch <skywalker-11@mi-pietsch.de>
      * 
      * @since 5.0.0
      *
@@ -153,11 +155,19 @@ class Saml
         $this->_enabled = $setting->saml_enabled == '1';
 
         if ($this->isEnabled()) {
+            //Let onelogin/php-saml know to use 'X-Forwarded-*' headers if it is from a trusted proxy
+            OneLogin_Saml2_Utils::setProxyVars(request()->isFromTrustedProxy());
+
             data_set($settings, 'sp.entityId', url('/'));
             data_set($settings, 'sp.assertionConsumerService.url', route('saml.acs'));
             data_set($settings, 'sp.singleLogoutService.url', route('saml.sls'));
             data_set($settings, 'sp.x509cert', $setting->saml_sp_x509cert);
             data_set($settings, 'sp.privateKey', $setting->saml_sp_privatekey);
+            if(!empty($setting->saml_sp_x509certNew)) {
+                data_set($settings, 'sp.x509certNew', $setting->saml_sp_x509certNew);
+            } else {
+                data_set($settings, 'sp.x509certNew', "");
+            }
 
             if (!empty(data_get($settings, 'sp.privateKey'))) {
                 data_set($settings, 'security.logoutRequestSigned', true);
@@ -210,7 +220,6 @@ class Saml
                     }
                 }
             }
-
             $this->_settings = $settings;
         }
     }
@@ -318,6 +327,20 @@ class Saml
         }
 
         return $this->_auth;
+    }
+
+    /**
+     * Get a setting.
+     * 
+     * @author Johnson Yi <jyi.dev@outlook.com>
+     * 
+     * @param string|array|int $key
+     * @param mixed $default
+     * 
+     * @return void
+     */
+    public function getSetting($key, $default = null) {
+        return data_get($this->_settings, $key, $default);
     }
 
     /**

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class ForgotPasswordController extends Controller
 {
@@ -60,9 +59,9 @@ class ForgotPasswordController extends Controller
          */
 
         $request->validate([
-            'email' => ['required', 'email', 'max:255'],
+            'username' => ['required', 'max:255'],
         ]);
-        
+
 
 
         /**
@@ -72,18 +71,26 @@ class ForgotPasswordController extends Controller
          * Once we have attempted to send the link, we will examine the response
          * then see the message we need to show to the user. Finally, we'll send out a proper response.
          */
-        $response = $this->broker()->sendResetLink(
-            array_merge(
-                $request->only('email'),
-                ['activated' => '1'],
-                ['ldap_import' => '0']
-            )
-        );
+
+        $response = null;
+
+        try {
+            $response = $this->broker()->sendResetLink(
+                array_merge(
+                    $request->only('username'),
+                    ['activated' => '1'],
+                    ['ldap_import' => '0']
+                )
+            );
+        } catch(\Exception $e) {
+            \Log::info('Password reset attempt: User '.$request->input('username').'failed with exception: '.$e );
+        }
+
 
         if ($response === \Password::RESET_LINK_SENT) {
-            \Log::info('Password reset attempt: User '.$request->input('email').' found, password reset sent');
+            \Log::info('Password reset attempt: User '.$request->input('username').' WAS found, password reset sent');
         } else {
-            \Log::info('Password reset attempt: User '.$request->input('email').' not found or user is inactive');
+            \Log::info('Password reset attempt: User matching username '.$request->input('username').' NOT FOUND or user is inactive');
         }
 
 

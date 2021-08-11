@@ -111,6 +111,7 @@ class License extends Depreciable
       'manufacturer' => ['name'],
       'company'      => ['name'],
       'category'     => ['name'],
+      'depreciation' => ['name'],
     ];
 
     /**

@@ -42,7 +42,8 @@ class BulkUsersController extends Controller
                     ->with('groups', Group::pluck('name', 'id'));
 
             } elseif ($request->input('bulk_actions') == 'delete') {
-                return view('users/confirm-bulk-delete', compact('users',  Helper::statusLabelList()));
+                return view('users/confirm-bulk-delete')->with('users', $users)->with('statuslabel_list',  Helper::statusLabelList());
+
 
             } elseif ($request->input('bulk_actions') == 'bulkpasswordreset') {
                 foreach ($users as $user) {
@@ -173,7 +174,7 @@ class BulkUsersController extends Controller
         }
 
         $users = User::whereIn('id', $user_raw_array)->get();
-        $assets = Asset::whereIn('assigned_to', $user_raw_array)->get();
+        $assets = Asset::whereIn('assigned_to', $user_raw_array)->where('assigned_type', 'App\Models\User')->get();
         $accessories = DB::table('accessories_users')->whereIn('assigned_to', $user_raw_array)->get();
         $licenses = DB::table('license_seats')->whereIn('assigned_to', $user_raw_array)->get();
 

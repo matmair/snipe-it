@@ -91,6 +91,7 @@ class Accessory extends SnipeModel
         'supplier_id',
         'image',
         'qty',
+        'min_amt',
         'requestable'
     ];
 
@@ -234,7 +235,7 @@ class Accessory extends SnipeModel
 
     public function users()
     {
-        return $this->belongsToMany('\App\Models\User', 'accessories_users', 'accessory_id', 'assigned_to')->withPivot('id')->withTrashed();
+        return $this->belongsToMany('\App\Models\User', 'accessories_users', 'accessory_id', 'assigned_to')->withPivot('id', 'created_at', 'note')->withTrashed();
     }
 
     /**

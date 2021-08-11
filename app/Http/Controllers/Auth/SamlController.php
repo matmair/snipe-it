@@ -53,8 +53,10 @@ class SamlController extends Controller
         if (empty($metadata)) {
             return response()->view('errors.403', [], 403);
         }
-
-        return response($metadata)->header('Content-Type', 'text/xml');
+    
+        return response()->streamDownload(function () use ($metadata) {
+            echo $metadata;
+        }, 'snipe-it-metadata.xml', ['Content-Type' => 'text/xml']);
     }
 
     /**
@@ -99,8 +101,8 @@ class SamlController extends Controller
         $errors = $auth->getErrors();
 
         if (!empty($errors)) {
-            Log::debug("There was an error with SAML ACS: " . implode(', ', $errors));
-            Log::debug("Reason: " . $auth->getLastErrorReason());
+            Log::error("There was an error with SAML ACS: " . implode(', ', $errors));
+            Log::error("Reason: " . $auth->getLastErrorReason());
             return redirect()->route('login')->with('error', trans('auth/message.signin.error'));
         }
 
@@ -113,7 +115,7 @@ class SamlController extends Controller
      * Receives LogoutRequest/LogoutResponse from IdP and flashes
      * back to the LoginController for logging out.
      * 
-     * /saml/slo
+     * /saml/sls
      * 
      * @author Johnson Yi <jyi.dev@outlook.com>
      * 
@@ -126,12 +128,13 @@ class SamlController extends Controller
     public function sls(Request $request)
     {
         $auth = $this->saml->getAuth();
-        $sloUrl = $auth->processSLO(true, null, null, null, true);
+        $retrieveParametersFromServer = $this->saml->getSetting('retrieveParametersFromServer', false);
+        $sloUrl = $auth->processSLO(true, null, $retrieveParametersFromServer, null, true);
         $errors = $auth->getErrors();
         
         if (!empty($errors)) {
-            Log::debug("There was an error with SAML SLS: " . implode(', ', $errors));
-            Log::debug("Reason: " . $auth->getLastErrorReason());
+            Log::error("There was an error with SAML SLS: " . implode(', ', $errors));
+            Log::error("Reason: " . $auth->getLastErrorReason());
             return view('errors.403');
         }
 

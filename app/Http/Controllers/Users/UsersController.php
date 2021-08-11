@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Notifications\WelcomeNotification;
 use Auth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Password;
 use Input;
 use Redirect;
 use Str;
@@ -126,7 +127,9 @@ class UsersController extends Controller
         }
         $user->permissions =  json_encode($permissions_array);
 
-        app('App\Http\Requests\ImageUploadRequest')->handleImages($user, '', 'avatar', 'avatars');
+
+        // we have to invoke the
+        app('App\Http\Requests\ImageUploadRequest')->handleImages($user, 600, 'image', 'avatars', 'avatar');
 
         if ($user->save()) {
             if ($request->filled('groups')) {
@@ -206,6 +209,7 @@ class UsersController extends Controller
      */
     public function update(SaveUserRequest $request, $id = null)
     {
+
         // We need to reverse the UI specific logic for our
         // permissions here before we update the user.
         $permissions = $request->input('permissions', array());
@@ -288,8 +292,11 @@ class UsersController extends Controller
 
         $user->permissions =  json_encode($permissions_array);
 
-        app('App\Http\Requests\ImageUploadRequest')->handleImages($user, '', 'avatar', 'avatars');
+        // Handle uploaded avatar
+        app('App\Http\Requests\ImageUploadRequest')->handleImages($user, 600, 'avatar', 'avatars', 'avatar');
 
+
+        //\Log::debug(print_r($user, true));
 
         // Was the user updated?
         if ($user->save()) {
@@ -610,5 +617,32 @@ class UsersController extends Controller
             ->with('consumables', $consumables)
             ->with('show_user', $show_user)
             ->with('settings', Setting::getSettings());
+    }
+
+
+    /**
+     * Send individual password reset email
+     *
+     * @author A. Gianotto
+     * @since [v5.0.15]
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function sendPasswordReset($id) {
+
+        if (($user = User::find($id)) &&  ($user->activated == '1') && ($user->email!='') && ($user->ldap_import == '0')) {
+            $credentials = ['email' => $user->email];
+
+            try {
+                \Password::sendResetLink($credentials, function (Message $message) use ($user) {
+                    $message->subject($this->getEmailSubject());
+                });
+                return redirect()->back()->with('success', trans('admin/users/message.password_reset_sent', ['email' => $user->email]));
+
+            } catch (\Exception $e) {
+                return redirect()->back()->with('error', ' Error sending email. :( ');
+            }
+
+        }
+        return redirect()->back()->with('error', 'User is not activated, is LDAP synced, or does not have an email address ');
     }
 }

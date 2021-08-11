@@ -103,11 +103,34 @@ class LicensesController extends Controller
             case 'category':
                 $licenses = $licenses->leftJoin('categories', 'licenses.category_id', '=', 'categories.id')->orderBy('categories.name', $order);
                 break;
+            case 'depreciation':
+                $licenses = $licenses->leftJoin('depreciations', 'licenses.depreciation_id', '=', 'depreciations.id')->orderBy('depreciations.name', $order);
+                break;
             case 'company':
                 $licenses = $licenses->leftJoin('companies', 'licenses.company_id', '=', 'companies.id')->orderBy('companies.name', $order);
                 break;
             default:
-                $allowed_columns = ['id','name','purchase_cost','expiration_date','renewal_date','purchase_order','order_number','notes','purchase_date','serial','company','category','license_name','license_email','free_seats_count','seats'];
+                $allowed_columns =
+                    [
+                        'id',
+                        'name',
+                        'purchase_cost',
+                        'expiration_date',
+                        'purchase_order',
+                        'order_number',
+                        'notes',
+                        'purchase_date',
+                        'serial',
+                        'company',
+                        'category',
+                        'license_name',
+                        'license_email',
+                        'free_seats_count',
+                        'seats',
+                        'termination_date',
+                        'depreciation_id',
+                        'renewal_date'
+                    ];
                 $sort = in_array($request->input('sort'), $allowed_columns) ? e($request->input('sort')) : 'created_at';
                 $licenses = $licenses->orderBy($sort, $order);
                 break;
@@ -215,50 +238,6 @@ class LicensesController extends Controller
         }
         return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/licenses/message.assoc_users')));
     }
-
-    /**
-     * Get license seat listing
-     *
-     * @author [A. Gianotto] [<snipe@snipe.net>]
-     * @since [v1.0]
-     * @param int $licenseId
-     * @return \Illuminate\Contracts\View\View
-     */
-    public function seats(Request $request, $licenseId)
-    {
-
-        if ($license = License::find($licenseId)) {
-
-            $this->authorize('view', $license);
-
-            $seats = LicenseSeat::with('license', 'user', 'asset', 'user.department')
-                ->where('license_seats.license_id', $licenseId);
-
-            $order = $request->input('order') === 'asc' ? 'asc' : 'desc';
-
-            if ($request->input('sort')=='department') {
-                $seats->OrderDepartments($order);
-            } else {
-                $seats->orderBy('id', $order);
-            }
-
-            $offset = (($seats) && (request('offset') > $seats->count())) ? 0 : request('offset', 0);
-            $limit = request('limit', 50);
-            
-            $total = $seats->count();
-
-            $seats = $seats->skip($offset)->take($limit)->get();
-
-            if ($seats) {
-                return (new LicenseSeatsTransformer)->transformLicenseSeats($seats, $total);
-            }
-
-        }
-
-        return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/licenses/message.does_not_exist')), 200);
-
-    }
-
     
     /**
      * Gets a paginated collection for the select2 menus

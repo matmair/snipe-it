@@ -50,11 +50,19 @@ class CategoryPresenter extends Presenter
                 "title" => trans('general.qty'),
                 "visible" => true
             ],[
-                "field" => "eula",
+                "field" => "has_eula",
                 "searchable" => false,
                 "sortable" => false,
                 "title" => trans('admin/categories/table.eula_text'),
                 "visible" => false,
+                "formatter" => 'trueFalseFormatter',
+            ],[
+                "field" => "checkin_email",
+                "searchable" => false,
+                "sortable" => true,
+                "class" => 'css-envelope',
+                "title" => 'Send Email',
+                "visible" => true,
                 "formatter" => 'trueFalseFormatter',
             ],[
                 "field" => "require_acceptance",
@@ -71,7 +79,23 @@ class CategoryPresenter extends Presenter
                 "title" => trans('table.actions'),
                 "visible" => true,
                 "formatter" => "categoriesActionsFormatter",
-            ]
+            ],
+            [
+                "field" => "created_at",
+                "searchable" => true,
+                "sortable" => true,
+                "visible" => false,
+                "title" => trans('general.created_at'),
+                "formatter" => "dateDisplayFormatter"
+            ],
+            [
+                "field" => "updated_at",
+                "searchable" => true,
+                "sortable" => true,
+                "visible" => false,
+                "title" => trans('general.updated_at'),
+                "formatter" => "dateDisplayFormatter"
+            ],
         ];
 
         return json_encode($layout);

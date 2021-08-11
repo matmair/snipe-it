@@ -8,8 +8,8 @@
           @if ($field->element!='text')
               <!-- Listbox -->
               @if ($field->element=='listbox')
-                  {{ Form::select($field->db_column_name(), $field->formatFieldValuesAsArray(),
-                  Request::old($field->db_column_name(),(isset($item) ? $item->{$field->db_column_name()} : $field->defaultValue($model->id))), ['class'=>'format select2 form-control']) }}
+                   {{ Form::select($field->db_column_name(), $field->formatFieldValuesAsArray(),
+                  Request::old($field->db_column_name(),(isset($item) ? \App\Helpers\Helper::gracefulDecrypt($field, $item->{$field->db_column_name()}) : $field->defaultValue($model->id))), ['class'=>'format select2 form-control']) }}
 
               @elseif ($field->element=='textarea')
                       <textarea class="col-md-6 form-control" id="{{ $field->db_column_name() }}" name="{{ $field->db_column_name() }}">{{ Request::old($field->db_column_name(),(isset($item) ? $item->{$field->db_column_name()} : $field->defaultValue($model->id))) }}</textarea>
@@ -21,10 +21,22 @@
 
                       <div>
                           <label>
-                              <input type="checkbox" value="1" name="{{ $field->db_column_name() }}[]" class="minimal" {{ Request::old($field->db_column_name()) != '' ? ' checked="checked"' : '' }}> key: {{ $key }} value: {{ $value }}
+                              <input type="checkbox" value="{{ $value }}" name="{{ $field->db_column_name() }}[]" class="minimal" {{  isset($item) ? (in_array($key, explode(', ', $item->{$field->db_column_name()})) ? ' checked="checked"' : '') : (Request::old($field->db_column_name()) != '' ? ' checked="checked"' : '') }}>
+                              {{ $value }}
                           </label>
                       </div>
                   @endforeach
+
+              @elseif ($field->element=='radio')
+              @foreach ($field->formatFieldValuesAsArray() as $value)
+
+              <div>
+                  <label>
+                      <input type="radio" value="{{ $value }}" name="{{ $field->db_column_name() }}" class="minimal" {{ isset($item) ? ($item->{$field->db_column_name()} == $value ? ' checked="checked"' : '') : (Request::old($field->db_column_name()) != '' ? ' checked="checked"' : '') }}>
+                      {{ $value }}
+                  </label>
+              </div>
+          @endforeach
 
               @endif
 

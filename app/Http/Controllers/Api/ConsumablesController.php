@@ -8,7 +8,9 @@ use App\Http\Transformers\ConsumablesTransformer;
 use App\Http\Transformers\SelectlistTransformer;
 use App\Models\Company;
 use App\Models\Consumable;
+use App\Models\User;
 use Illuminate\Http\Request;
+use App\Http\Requests\ImageUploadRequest;
 
 class ConsumablesController extends Controller
 {
@@ -42,6 +44,10 @@ class ConsumablesController extends Controller
 
         if ($request->filled('manufacturer_id')) {
             $consumables->where('manufacturer_id','=',$request->input('manufacturer_id'));
+        }
+
+        if ($request->filled('location_id')) {
+            $consumables->where('location_id','=',$request->input('location_id'));
         }
 
 
@@ -89,14 +95,15 @@ class ConsumablesController extends Controller
      *
      * @author [A. Gianotto] [<snipe@snipe.net>]
      * @since [v4.0]
-     * @param  \Illuminate\Http\Request $request
+     * @param  \App\Http\Requests\ImageUploadRequest $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(ImageUploadRequest $request)
     {
         $this->authorize('create', Consumable::class);
         $consumable = new Consumable;
         $consumable->fill($request->all());
+        $consumable = $request->handleImages($consumable);
 
         if ($consumable->save()) {
             return response()->json(Helper::formatStandardApiResponse('success', $consumable, trans('admin/consumables/message.create.success')));
@@ -124,16 +131,17 @@ class ConsumablesController extends Controller
      *
      * @author [A. Gianotto] [<snipe@snipe.net>]
      * @since [v4.0]
-     * @param  \Illuminate\Http\Request $request
+     * @param  \App\Http\Requests\ImageUploadRequest $request
      * @param  int $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(ImageUploadRequest $request, $id)
     {
         $this->authorize('update', Consumable::class);
         $consumable = Consumable::findOrFail($id);
         $consumable->fill($request->all());
-
+        $consumable = $request->handleImages($consumable);
+        
         if ($consumable->save()) {
             return response()->json(Helper::formatStandardApiResponse('success', $consumable, trans('admin/consumables/message.update.success')));
         }
@@ -158,7 +166,7 @@ class ConsumablesController extends Controller
         return response()->json(Helper::formatStandardApiResponse('success', null,  trans('admin/consumables/message.delete.success')));
     }
 
-        /**
+    /**
     * Returns a JSON response containing details on the users associated with this consumable.
     *
     * @author [A. Gianotto] [<snipe@snipe.net>]
@@ -196,6 +204,57 @@ class ConsumablesController extends Controller
         $consumableCount = $consumable->users->count();
         $data = array('total' => $consumableCount, 'rows' => $rows);
         return $data;
+    }
+
+    /**
+     * Checkout a consumable
+     *
+     * @author [A. Gutierrez] [<andres@baller.tv>]
+     * @param int $id
+     * @since [v4.9.5]
+     * @return JsonResponse
+     */
+    public function checkout(Request $request, $id)
+    {
+        // Check if the consumable exists
+        if (is_null($consumable = Consumable::find($id))) {
+            return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/consumables/message.does_not_exist')));
+        }
+
+        $this->authorize('checkout', $consumable);
+
+        if ($consumable->qty > 0) {
+
+            // Check if the user exists
+            $assigned_to = $request->input('assigned_to');
+            if (is_null($user = User::find($assigned_to))) {
+                // Return error message
+                return response()->json(Helper::formatStandardApiResponse('error', null, 'No user found'));
+            }
+
+            // Update the consumable data
+            $consumable->assigned_to = e($assigned_to);
+
+            $consumable->users()->attach($consumable->id, [
+                'consumable_id' => $consumable->id,
+                'user_id' => $user->id,
+                'assigned_to' => $assigned_to
+            ]);
+
+            // Log checkout event
+            $logaction = $consumable->logCheckout(e($request->input('note')), $user);
+            $data['log_id'] = $logaction->id;
+            $data['eula'] = $consumable->getEula();
+            $data['first_name'] = $user->first_name;
+            $data['item_name'] = $consumable->name;
+            $data['checkout_date'] = $logaction->created_at;
+            $data['note'] = $logaction->note;
+            $data['require_acceptance'] = $consumable->requireAcceptance();
+
+            return response()->json(Helper::formatStandardApiResponse('success', null,  trans('admin/consumables/message.checkout.success')));
+        }
+
+        return response()->json(Helper::formatStandardApiResponse('error', null, 'No consumables remaining'));
     }
 
     /**

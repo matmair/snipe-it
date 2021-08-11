@@ -103,7 +103,41 @@ class LicensePresenter extends Presenter
                 "visible" => false,
                 "title" => trans('general.purchase_date'),
                 'formatter' => 'dateDisplayFormatter'
+            ],
+            [
+                "field" => "termination_date",
+                "searchable" => true,
+                "sortable" => true,
+                "visible" => false,
+                "title" => trans('admin/licenses/form.termination_date'),
+                'formatter' => 'dateDisplayFormatter'
+            ],
+            [
+                "field" => "depreciation",
+                "searchable" => true,
+                "sortable" => true,
+                "switchable" => true,
+                "title" => trans('admin/hardware/form.depreciation'),
+                "visible" => false,
+                "formatter" => "depreciationsLinkObjFormatter",
+            ],
+
+            [
+                "field" => "maintained",
+                "searchable" => false,
+                "sortable" => true,
+                "visible" => false,
+                "title" => trans('admin/licenses/form.maintained'),
+                "formatter" => "trueFalseFormatter"
             ], [
+                "field" => "reassignable",
+                "searchable" => false,
+                "sortable" => true,
+                "visible" => false,
+                "title" => trans('admin/licenses/form.reassignable'),
+                "formatter" => "trueFalseFormatter"
+            ],
+            [
                 "field" => "purchase_cost",
                 "searchable" => true,
                 "sortable" => true,

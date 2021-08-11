@@ -21,6 +21,7 @@ use Image;
 use Input;
 use Redirect;
 use Response;
+use App\Helpers\StorageHelper;
 
 /**
  * This controller handles all actions related to Settings for
@@ -186,7 +187,7 @@ class SettingsController extends Controller
             Auth::login($user, true);
             $settings->save();
 
-            if ('1' == Input::get('email_creds')) {
+            if ($request->input('email_creds') == '1') {
                 $data               = [];
                 $data['email']      = $user->email;
                 $data['username']   = $user->username;
@@ -347,7 +348,7 @@ class SettingsController extends Controller
 
         $setting->depreciation_method = $request->input('depreciation_method');
 
-        if ('' != Input::get('per_page')) {
+        if ($request->input('per_page') != '') {
             $setting->per_page = $request->input('per_page');
         } else {
             $setting->per_page = 200;
@@ -399,6 +400,7 @@ class SettingsController extends Controller
         $setting->version_footer     = $request->input('version_footer');
         $setting->footer_text        = $request->input('footer_text');
         $setting->skin               = $request->input('skin');
+        $setting->allow_user_skin    = $request->input('allow_user_skin');
         $setting->show_url_in_emails = $request->input('show_url_in_emails', '0');
         $setting->logo_print_assets  = $request->input('logo_print_assets', '0');
 
@@ -409,86 +411,35 @@ class SettingsController extends Controller
             $setting->custom_css = $request->input('custom_css');
         }
 
+        $setting = $request->handleImages($setting,600,'logo','', 'logo');
 
-        if ($request->hasFile('logo')) {
-            $image         = $request->file('logo');
-            $ext           = $image->getClientOriginalExtension();
-            $setting->logo = $file_name = 'logo-'.date('U').'.'. $ext;
 
-            if ('svg' != $image->getClientOriginalExtension()) {
-                $upload = Image::make($image->getRealPath())->resize(null, 150, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
-            }
-
-            // This requires a string instead of an object, so we use ($string)
-            Storage::disk('public')->put($file_name, (string) $upload->encode());
-
-            // Remove Current image if exists
-            if (($setting->logo) && (file_exists($file_name))) {
-                Storage::disk('public')->delete($file_name);
-            }
-
-        } elseif ('1' == $request->input('clear_logo')) {
+        if ('1' == $request->input('clear_logo')) {
                 Storage::disk('public')->delete($setting->logo);
                 $setting->logo  = null;
                 $setting->brand = 1;
         }
 
 
-        if ($request->hasFile('email_logo')) {
-            $email_image         = $email_upload = $request->file('email_logo');
-            $email_ext           = $email_image->getClientOriginalExtension();
-            $setting->email_logo = $email_file_name = 'email_logo.' . $email_ext;
+        $setting = $request->handleImages($setting,600,'email_logo','', 'email_logo');
 
-            if ('svg' != $email_image->getClientOriginalExtension()) {
-                $email_upload = Image::make($email_image->getRealPath())->resize(null, 100, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
-            }
 
-            // This requires a string instead of an object, so we use ($string)
-            Storage::disk('public')->put($email_file_name, (string) $email_upload->encode());
-
-            // Remove Current image if exists
-            if (($setting->email_logo) && (file_exists($email_file_name))) {
-                Storage::disk('public')->delete($email_file_name);
-            }
-        } elseif ('1' == $request->input('clear_email_logo')) {
+       if ('1' == $request->input('clear_email_logo')) {
             Storage::disk('public')->delete($setting->email_logo);
             $setting->email_logo  = null;
             // If they are uploading an image, validate it and upload it
         }
 
 
-        // If the user wants to clear the label logo...
-        if ($request->hasFile('label_logo')) {
-            $image         = $request->file('label_logo');
-            $ext           = $image->getClientOriginalExtension();
-            $setting->label_logo = $label_file_name = 'label_logo.' . $ext;
+        $setting = $request->handleImages($setting,600,'label_logo','', 'label_logo');
 
-            if ('svg' != $image->getClientOriginalExtension()) {
-                $upload = Image::make($image->getRealPath())->resize(null, 100, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
-            }
 
-            // This requires a string instead of an object, so we use ($string)
-            Storage::disk('public')->put($label_file_name, (string) $upload->encode());
-
-            // Remove Current image if exists
-            if (($setting->label_logo) && (file_exists($label_file_name))) {
-                Storage::disk('public')->delete($label_file_name);
-            }
-        } elseif ('1' == $request->input('clear_label_logo')) {
+        if ('1' == $request->input('clear_label_logo')) {
             Storage::disk('public')->delete($setting->label_logo);
             $setting->label_logo  = null;
 
-            // If they are uploading an image, validate it and upload it
         }
+
 
         // If the user wants to clear the favicon...
          if ($request->hasFile('favicon')) {
@@ -496,7 +447,7 @@ class SettingsController extends Controller
             $favicon_ext           = $favicon_image->getClientOriginalExtension();
             $setting->favicon      = $favicon_file_name = 'favicon-uploaded.' . $favicon_ext;
 
-            if (('ico' != $favicon_image->getClientOriginalExtension()) && ('svg' != $favicon_image->getClientOriginalExtension())) {
+            if (($favicon_image->getClientOriginalExtension()!='ico') && ($favicon_image->getClientOriginalExtension()!='svg')) {
                 $favicon_upload = Image::make($favicon_image->getRealPath())->resize(null, 36, function ($constraint) {
                     $constraint->aspectRatio();
                     $constraint->upsize();
@@ -507,11 +458,6 @@ class SettingsController extends Controller
             } else {
                 Storage::disk('public')->put($favicon_file_name, file_get_contents($request->file('favicon')));
             }
-
-
-
-
-
 
 
             // Remove Current image if exists
@@ -633,6 +579,7 @@ class SettingsController extends Controller
         $setting->default_currency    = $request->input('default_currency', '$');
         $setting->date_display_format = $request->input('date_display_format');
         $setting->time_display_format = $request->input('time_display_format');
+        $setting->digit_separator = $request->input('digit_separator');
 
         if ($setting->save()) {
             return redirect()->route('settings.index')
@@ -972,28 +919,36 @@ class SettingsController extends Controller
             return redirect()->to('admin')->with('error', trans('admin/settings/message.update.error'));
         }
 
-        $setting->ldap_enabled            = $request->input('ldap_enabled', '0');
-        $setting->ldap_server             = $request->input('ldap_server');
-        $setting->ldap_server_cert_ignore = $request->input('ldap_server_cert_ignore', false);
-        $setting->ldap_uname              = $request->input('ldap_uname');
-        if ($request->input('ldap_pword') !== '') {
-            $setting->ldap_pword = Crypt::encrypt($request->input('ldap_pword'));
+        if (!config('app.lock_passwords')===true) {
+            $setting->ldap_enabled            = $request->input('ldap_enabled', '0');
+            $setting->ldap_server             = $request->input('ldap_server');
+            $setting->ldap_server_cert_ignore = $request->input('ldap_server_cert_ignore', false);
+            $setting->ldap_uname              = $request->input('ldap_uname');
+            if ($request->filled('ldap_pword')) {
+                $setting->ldap_pword = Crypt::encrypt($request->input('ldap_pword'));
+            }
+            $setting->ldap_basedn            = $request->input('ldap_basedn');
+            $setting->ldap_filter            = $request->input('ldap_filter');
+            $setting->ldap_username_field    = $request->input('ldap_username_field');
+            $setting->ldap_lname_field       = $request->input('ldap_lname_field');
+            $setting->ldap_fname_field       = $request->input('ldap_fname_field');
+            $setting->ldap_auth_filter_query = $request->input('ldap_auth_filter_query');
+            $setting->ldap_version           = $request->input('ldap_version');
+            $setting->ldap_active_flag       = $request->input('ldap_active_flag');
+            $setting->ldap_emp_num           = $request->input('ldap_emp_num');
+            $setting->ldap_email             = $request->input('ldap_email');
+            $setting->ad_domain              = $request->input('ad_domain');
+            $setting->is_ad                  = $request->input('is_ad', '0');
+            $setting->ad_append_domain       = $request->input('ad_append_domain', '0');
+            $setting->ldap_tls               = $request->input('ldap_tls', '0');
+            $setting->ldap_pw_sync           = $request->input('ldap_pw_sync', '0');
+            $setting->custom_forgot_pass_url = $request->input('custom_forgot_pass_url');
+            $setting->ldap_phone_field       = $request->input('ldap_phone');
+            $setting->ldap_jobtitle          = $request->input('ldap_jobtitle');
+            $setting->ldap_country           = $request->input('ldap_country');
+            $setting->ldap_dept              = $request->input('ldap_dept');
+
         }
-        $setting->ldap_basedn            = $request->input('ldap_basedn');
-        $setting->ldap_filter            = $request->input('ldap_filter');
-        $setting->ldap_username_field    = $request->input('ldap_username_field');
-        $setting->ldap_lname_field       = $request->input('ldap_lname_field');
-        $setting->ldap_fname_field       = $request->input('ldap_fname_field');
-        $setting->ldap_auth_filter_query = $request->input('ldap_auth_filter_query');
-        $setting->ldap_version           = $request->input('ldap_version');
-        $setting->ldap_active_flag       = $request->input('ldap_active_flag');
-        $setting->ldap_emp_num           = $request->input('ldap_emp_num');
-        $setting->ldap_email             = $request->input('ldap_email');
-        $setting->ad_domain              = $request->input('ad_domain');
-        $setting->is_ad                  = $request->input('is_ad', '0');
-        $setting->ldap_tls               = $request->input('ldap_tls', '0');
-        $setting->ldap_pw_sync           = $request->input('ldap_pw_sync', '0');
-        $setting->custom_forgot_pass_url = $request->input('custom_forgot_pass_url');
 
         if ($setting->save()) {
             return redirect()->route('settings.ldap.index')
@@ -1043,6 +998,11 @@ class SettingsController extends Controller
             $setting->saml_sp_x509cert          = $request->input('saml_sp_x509cert');
             $setting->saml_sp_privatekey        = $request->input('saml_sp_privatekey');
         }
+        if (!empty($request->input('saml_sp_x509certNew'))) {
+            $setting->saml_sp_x509certNew       = $request->input('saml_sp_x509certNew');
+        } else {
+            $setting->saml_sp_x509certNew       = "";
+        }
         $setting->saml_custom_settings          = $request->input('saml_custom_settings');
 
         if ($setting->save()) {
@@ -1064,21 +1024,31 @@ class SettingsController extends Controller
      */
     public function getBackups()
     {
-        $path = storage_path() . '/app/' . config('backup.backup.name');
 
-        $path         = 'backups';
+        $path         = 'app/backups';
         $backup_files = Storage::files($path);
-        $files        = [];
+        $files_raw        = [];
 
         if (count($backup_files) > 0) {
             for ($f = 0; $f < count($backup_files); ++$f) {
-                $files[] = [
-                    'filename' => basename($backup_files[$f]),
-                    'filesize' => Setting::fileSizeConvert(Storage::size($backup_files[$f])),
-                    'modified' => Storage::lastModified($backup_files[$f]),
-                ];
+
+                // Skip dotfiles like .gitignore and .DS_STORE
+                if ((substr(basename($backup_files[$f]), 0, 1) != '.')) {
+
+                    $files_raw[] = [
+                        'filename' => basename($backup_files[$f]),
+                        'filesize' => Setting::fileSizeConvert(Storage::size($backup_files[$f])),
+                        'modified' => Storage::lastModified($backup_files[$f]),
+                    ];
+
+                }
+
+
             }
         }
+
+        // Reverse the array so it lists oldest first
+        $files = array_reverse($files_raw);
 
         return view('settings/backups', compact('path', 'files'));
     }
@@ -1124,13 +1094,15 @@ class SettingsController extends Controller
      *
      * @since [v1.8]
      *
-     * @return Redirect
+     * @return Storage
      */
     public function downloadFile($filename = null)
     {
+        $path = 'app/backups';
+
         if (! config('app.lock_passwords')) {
-            if (Storage::exists($filename)) {
-                return Response::download(Storage::url('') . e($filename));
+            if (Storage::exists($path . '/' . $filename)) {
+                return StorageHelper::downloader($path . '/' . $filename);
             } else {
                 // Redirect to the backup page
                 return redirect()->route('settings.backups.index')->with('error', trans('admin/settings/message.backup.file_not_found'));
@@ -1153,12 +1125,11 @@ class SettingsController extends Controller
     public function deleteFile($filename = null)
     {
         if (! config('app.lock_passwords')) {
-            $path = 'backups';
+            $path = 'app/backups';
 
             if (Storage::exists($path . '/' . $filename)) {
                 try {
                     Storage::delete($path . '/' . $filename);
-
                     return redirect()->route('settings.backups.index')->with('success', trans('admin/settings/message.backup.file_deleted'));
                 } catch (\Exception $e) {
                     \Log::debug($e);
@@ -1182,6 +1153,7 @@ class SettingsController extends Controller
      */
     public function getPurge()
     {
+        \Log::warning('User ID '.Auth::user()->id.' is attempting a PURGE');
         return view('settings.purge-form');
     }
 
@@ -1194,10 +1166,12 @@ class SettingsController extends Controller
      *
      * @return View
      */
-    public function postPurge()
+    public function postPurge(Request $request)
     {
         if (! config('app.lock_passwords')) {
-            if ('DELETE' == Input::get('confirm_purge')) {
+            if ('DELETE' == $request->input('confirm_purge')) {
+
+                \Log::warning('User ID '.Auth::user()->id.' initiated a PURGE!');
                 // Run a backup immediately before processing
                 Artisan::call('backup:run');
                 Artisan::call('snipeit:purge', ['--force' => 'true', '--no-interaction' => true]);
